@@ -2,10 +2,13 @@ name: ci-linux
 
 on:
   workflow_dispatch:
+  workflow_call:
   pull_request:
   push:
     branches:
       - main
+    tags:
+      - "v*"
 
 jobs:
   linux-build-smoke:
@@ -23,20 +26,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install Linux build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build pkg-config git curl ca-certificates python3 unzip
-
-      - name: Install Bun
+      - name: Bootstrap Bun
         run: |
           curl -fsSL https://bun.sh/install | bash
           echo "${HOME}/.bun/bin" >> "$GITHUB_PATH"
+
+      - name: Install Linux CI dependencies
+        run: bun run ci
 
       - name: Install JS dependencies
         run: bun install --frozen-lockfile
@@ -46,7 +42,7 @@ jobs:
 
       - name: Smoke test
         if: matrix.smoke
-        run: bun test ./test/smoke.test.ts
+        run: bun run test
 
       - name: Stage artifacts
         run: |

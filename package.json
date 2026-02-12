@@ -24,6 +24,7 @@
     "build": "bun run ./tools/build.ts system",
     "build:mac-arm64": "bun run ./tools/build.ts all --os mac --arch arm64 --backend metal",
     "build:linux-x64": "bun run ./tools/build.ts all --os linux --arch x64 --backend cpu",
+    "ci": "bun run ./tools/ci.ts install",
     "test": "bun test ./test/smoke.test.ts",
     "clean": "bun run ./tools/clean.ts"
   },

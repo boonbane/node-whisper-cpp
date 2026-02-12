@@ -105,6 +105,21 @@ namespace Native {
     return [];
   }
 
+  function getWhisperRuntimeFlags(os: string) {
+    const common = ["-DCMAKE_PLATFORM_NO_VERSIONED_SONAME=ON"];
+    if (os !== "linux") {
+      return common;
+    }
+
+    return [
+      ...common,
+      "-DCMAKE_SKIP_BUILD_RPATH=FALSE",
+      "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=FALSE",
+      "-DCMAKE_BUILD_RPATH=$ORIGIN",
+      "-DCMAKE_INSTALL_RPATH=$ORIGIN",
+    ];
+  }
+
   export async function build(os: string, arch: string, backend: string, options: RunOptions = {}) {
     if (options.dryRun) {
       return;
@@ -117,7 +132,7 @@ namespace Native {
     }
 
     await $
-      `cmake -S ${dirs.WHISPER_SOURCE} -B ${dirs.WHISPER_BUILD(target)} -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${dirs.WHISPER_INSTALL(target)} -DBUILD_SHARED_LIBS=ON -DWHISPER_BUILD_EXAMPLES=OFF -DWHISPER_BUILD_TESTS=OFF ${getWhisperBackendFlags(backend)}`
+      `cmake -S ${dirs.WHISPER_SOURCE} -B ${dirs.WHISPER_BUILD(target)} -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${dirs.WHISPER_INSTALL(target)} -DBUILD_SHARED_LIBS=ON -DWHISPER_BUILD_EXAMPLES=OFF -DWHISPER_BUILD_TESTS=OFF ${getWhisperBackendFlags(backend)} ${getWhisperRuntimeFlags(os)}`
       .cwd(REPO);
     await $`cmake --build ${dirs.WHISPER_BUILD(target)} --config Release`.cwd(REPO);
     await $`cmake --install ${dirs.WHISPER_BUILD(target)} --config Release`.cwd(REPO);

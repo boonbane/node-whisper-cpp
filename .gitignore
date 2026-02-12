@@ -20,3 +20,4 @@ test/.tmp/
 .llm/external
 .llm/doc
 .llm/reference
+/.llm/ci-macos.yml
