@@ -1,5 +1,5 @@
 {
-  "name": "node-whisper-cpp",
+  "name": "@spader/node-whisper-cpp",
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
@@ -16,8 +16,8 @@
   },
   "files": [
     "dist/",
-    "packages/@node-whisper-cpp/mac-arm64-metal/",
-    "packages/@node-whisper-cpp/linux-x64-cpu/",
+    "packages/platform/mac-arm64-metal/",
+    "packages/platform/linux-x64-cpu/",
     "package.json"
   ],
   "scripts": {
@@ -28,8 +28,11 @@
     "clean": "bun run ./tools/clean.ts"
   },
   "optionalDependencies": {
-    "@node-whisper-cpp/mac-arm64-metal": "0.0.1",
-    "@node-whisper-cpp/linux-x64-cpu": "0.0.1"
+    "@spader/node-whisper-cpp-mac-arm64-metal": "0.0.1",
+    "@spader/node-whisper-cpp-linux-x64-cpu": "0.0.1"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "node-addon-api": "^8.3.1"

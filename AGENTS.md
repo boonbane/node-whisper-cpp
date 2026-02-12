@@ -7,8 +7,8 @@
   - `.cache/store/addon/$platform`: `package.json`, native binaries, and `.node` addon
   - `.cache/store/js`: JavaScript compiled from our TypeScript sources
   - `.cache/store/npm/`: Tarball NPM packages
-    - `@node-whisper-cpp/$platform`: The platform-specific package containing the addon
-    - `node-whisper-cpp`: The platform-agnostic package containing the JS loader and API
+    - `@spader/node-whisper-cpp-$platform`: The platform-specific package containing the addon
+    - `@spader/node-whisper-cpp`: The platform-agnostic package containing the JS loader and API
 
 # Rules
 - Never put logic in `package.json` scripts; every script should look like `bun run $script $args`

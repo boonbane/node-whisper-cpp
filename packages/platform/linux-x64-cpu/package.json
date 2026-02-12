@@ -1,7 +1,7 @@
 {
-  "name": "@node-whisper-cpp/linux-x64-cpu",
+  "name": "@spader/node-whisper-cpp-linux-x64-cpu",
   "version": "0.0.1",
-  "description": "Prebuilt node-whisper-cpp binary for Linux x64 CPU",
+  "description": "Prebuilt @spader/node-whisper-cpp binary for Linux x64 CPU",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -26,5 +26,8 @@
   "libc": [
     "glibc"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -1,4 +1,4 @@
-import { createContext, systemInfo, version } from "node-whisper-cpp";
+import { createContext, systemInfo, version } from "@spader/node-whisper-cpp";
 
 const v = version();
 if (typeof v !== "string" || v.length === 0) {

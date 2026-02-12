@@ -9,8 +9,13 @@ const require = createRequire(import.meta.url);
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
 const platformPackages: Record<string, string> = {
-  "darwin-arm64": "@node-whisper-cpp/mac-arm64-metal",
-  "linux-x64": "@node-whisper-cpp/linux-x64-cpu",
+  "darwin-arm64": "@spader/node-whisper-cpp-mac-arm64-metal",
+  "linux-x64": "@spader/node-whisper-cpp-linux-x64-cpu",
+};
+
+const localPlatformDirs: Record<string, string> = {
+  "@spader/node-whisper-cpp-mac-arm64-metal": "mac-arm64-metal",
+  "@spader/node-whisper-cpp-linux-x64-cpu": "linux-x64-cpu",
 };
 
 function getPlatformKey() {
@@ -34,12 +39,15 @@ function resolvePlatformPackageDir(packageName: string): string {
     const entryPath = require.resolve(packageName);
     return join(dirname(entryPath), "..");
   } catch {
-    const packageDirName = packageName.split("/")[1];
+    const packageDirName = localPlatformDirs[packageName];
+    if (packageDirName == null) {
+      throw new Error(`No local package directory mapping for ${packageName}`);
+    }
     return join(
       currentDir,
       "..",
       "packages",
-      "@node-whisper-cpp",
+      "platform",
       packageDirName
     );
   }

@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "node-whisper-cpp",
+      "name": "@spader/node-whisper-cpp",
       "dependencies": {
         "node-addon-api": "^8.3.1",
       },
@@ -16,8 +16,8 @@
         "yargs": "^18.0.0",
       },
       "optionalDependencies": {
-        "@node-whisper-cpp/linux-x64-cpu": "0.0.1",
-        "@node-whisper-cpp/mac-arm64-metal": "0.0.1",
+        "@spader/node-whisper-cpp-linux-x64-cpu": "0.0.1",
+        "@spader/node-whisper-cpp-mac-arm64-metal": "0.0.1",
       },
     },
   },

@@ -10,17 +10,17 @@ import { Build } from "#tools/build";
 
 type SmokeTarget = {
   triple: "mac-arm64-metal" | "linux-x64-cpu";
-  platformPackage: "@node-whisper-cpp/mac-arm64-metal" | "@node-whisper-cpp/linux-x64-cpu";
+  platformPackage: "@spader/node-whisper-cpp-mac-arm64-metal" | "@spader/node-whisper-cpp-linux-x64-cpu";
 };
 
 const targetsBySystem: Record<string, SmokeTarget> = {
   "darwin-arm64": {
     triple: "mac-arm64-metal",
-    platformPackage: "@node-whisper-cpp/mac-arm64-metal",
+    platformPackage: "@spader/node-whisper-cpp-mac-arm64-metal",
   },
   "linux-x64": {
     triple: "linux-x64-cpu",
-    platformPackage: "@node-whisper-cpp/linux-x64-cpu",
+    platformPackage: "@spader/node-whisper-cpp-linux-x64-cpu",
   },
 };
 
@@ -30,7 +30,7 @@ const tsc = require.resolve("typescript/bin/tsc");
 const repoRoot = join(import.meta.dir, "..");
 const jsPackageDir = join(import.meta.dir, "packages", "js");
 const tsPackageDir = join(import.meta.dir, "packages", "ts");
-const jsTarballPath = join(repoRoot, ".cache", "store", "npm", "node-whisper-cpp.tgz");
+const jsTarballPath = join(repoRoot, ".cache", "store", "npm", "@spader", "node-whisper-cpp.tgz");
 
 function getTarget(): SmokeTarget | null {
   const key = `${process.platform}-${process.arch}`;
@@ -38,7 +38,7 @@ function getTarget(): SmokeTarget | null {
 }
 
 function nativeTarballPathFor(target: SmokeTarget): string {
-  return join(repoRoot, ".cache", "store", "npm", "@node-whisper-cpp", `${target.triple}.tgz`);
+  return join(repoRoot, ".cache", "store", "npm", "@spader", `node-whisper-cpp-${target.triple}.tgz`);
 }
 
 function run(command: string, args: string[], cwd: string) {

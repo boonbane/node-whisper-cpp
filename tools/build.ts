@@ -34,8 +34,8 @@ const dirs = {
   WHISPER_BUILD: (target: string) => join(REPO, ".cache", "build", target, "whisper"),
   WHISPER_INSTALL: (target: string) => join(REPO, ".cache", "store", "whisper.cpp", target),
   ADDON_BUILD: join(REPO, ".cache", "build", "node"),
-  ADDON_PACKAGE_JSON: (target: string) => join(REPO, "packages", "@node-whisper-cpp", target, "package.json"),
-  ADDON_TSCONFIG: (target: string) => join(REPO, "packages", "@node-whisper-cpp", target, "tsconfig.json"),
+  ADDON_PACKAGE_JSON: (target: string) => join(REPO, "packages", "platform", target, "package.json"),
+  ADDON_TSCONFIG: (target: string) => join(REPO, "packages", "platform", target, "tsconfig.json"),
   source: join(REPO, ".cache", "source"),
   store: {
     addon: (target: string) => join(REPO, ".cache", "store", "addon", target),
@@ -70,11 +70,11 @@ function getSystemTarget(): BuildTarget {
 }
 
 function getJsTarballPath() {
-  return join(dirs.TARBALLS, "node-whisper-cpp.tgz");
+  return join(dirs.TARBALLS, "@spader", "node-whisper-cpp.tgz");
 }
 
 function getNativeTarballPath(targetTriple: string) {
-  return join(dirs.TARBALLS, "@node-whisper-cpp", `${targetTriple}.tgz`);
+  return join(dirs.TARBALLS, "@spader", `node-whisper-cpp-${targetTriple}.tgz`);
 }
 
 async function packToCanonicalTarball(sourceDir: string, outputPath: string) {
@@ -201,8 +201,8 @@ namespace Js {
     };
     const version = sourcePkg.version;
     const optionalDependencies: Record<string, string> = {
-      "@node-whisper-cpp/mac-arm64-metal": version,
-      "@node-whisper-cpp/linux-x64-cpu": version,
+      "@spader/node-whisper-cpp-mac-arm64-metal": version,
+      "@spader/node-whisper-cpp-linux-x64-cpu": version,
     };
     const stagedPkg = {
       ...sourcePkg,

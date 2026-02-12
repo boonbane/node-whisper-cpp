@@ -1,8 +1,8 @@
-import { createContext, systemInfo, version } from "node-whisper-cpp";
+import { createContext, systemInfo, version } from "@spader/node-whisper-cpp";
 
 const platformPackages = {
-  "darwin-arm64": "@node-whisper-cpp/mac-arm64-metal",
-  "linux-x64": "@node-whisper-cpp/linux-x64-cpu",
+  "darwin-arm64": "@spader/node-whisper-cpp-mac-arm64-metal",
+  "linux-x64": "@spader/node-whisper-cpp-linux-x64-cpu",
 };
 
 const platformKey = `${process.platform}-${process.arch}`;

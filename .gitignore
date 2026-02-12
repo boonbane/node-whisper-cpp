@@ -8,8 +8,8 @@ node_modules/
 build/
 dist/
 artifacts/
-packages/@node-whisper-cpp/*/dist/
-packages/@node-whisper-cpp/*/bins/
+packages/platform/*/dist/
+packages/platform/*/bins/
 
 # test scratch artifacts
 test/.tmp/
