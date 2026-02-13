@@ -7,6 +7,7 @@ import type {
 } from "./types.js";
 
 export type { ContextOptions, Segment, TranscribeOptions };
+export * as platform from "./platform.js";
 
 export function version(): string {
   return loadAddon().version();

@@ -1,7 +1,7 @@
 {
-  "name": "@spader/node-whisper-cpp-mac-arm64-metal",
+  "name": "@spader/node-whisper-cpp-x64-linux-cpu-gnu",
   "version": "0.0.1",
-  "description": "Prebuilt @spader/node-whisper-cpp binary for macOS arm64 with Metal support",
+  "description": "Prebuilt @spader/node-whisper-cpp binary for Linux x64 CPU glibc",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,10 +18,13 @@
     "package.json"
   ],
   "os": [
-    "darwin"
+    "linux"
   ],
   "cpu": [
-    "arm64"
+    "x64"
+  ],
+  "libc": [
+    "glibc"
   ],
   "repository": {
     "type": "git",

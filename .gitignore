@@ -22,3 +22,4 @@ test/.tmp/
 .llm/reference
 /.llm/ci-macos.yml
 /.llm/logs
+/.envrc

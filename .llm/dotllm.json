@@ -11,6 +11,18 @@
       "name": "npm-docs",
       "uri": "git@github.com:npm/documentation.git",
       "description": "Documentation for the npm registry, website, and command-line interface."
+    },
+    "opencode": {
+      "kind": "url",
+      "name": "opencode",
+      "uri": "git@github.com:anomalyco/opencode.git",
+      "description": "The open source coding agent."
+    },
+    "cuda-toolkit": {
+      "kind": "url",
+      "name": "cuda-toolkit",
+      "uri": "git@github.com:Jimver/cuda-toolkit.git",
+      "description": "GitHub Action to install CUDA"
     }
   }
 }

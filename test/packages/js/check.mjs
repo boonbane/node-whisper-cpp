@@ -1,17 +1,7 @@
-import { createContext, systemInfo, version } from "@spader/node-whisper-cpp";
+import { createContext, platform, systemInfo, version } from "@spader/node-whisper-cpp";
 
-const platformPackages = {
-  "darwin-arm64": "@spader/node-whisper-cpp-mac-arm64-metal",
-  "linux-x64": "@spader/node-whisper-cpp-linux-x64-cpu",
-};
-
-const platformKey = `${process.platform}-${process.arch}`;
-const platformPackage = platformPackages[platformKey];
-if (platformPackage == null) {
-  throw new Error(`Unsupported platform for smoke test: ${platformKey}`);
-}
-
-await import(platformPackage);
+const triple = platform.detect();
+await import(`@spader/node-whisper-cpp-${triple}`);
 
 if (typeof version() !== "string" || version().length === 0) {
   throw new Error("version() did not return a non-empty string");

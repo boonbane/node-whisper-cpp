@@ -1,70 +1,40 @@
 import { createRequire } from "node:module";
-import { platform, arch } from "node:process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { NativeAddon } from "./types.js";
+import { detect } from "./platform.js";
 
 const require = createRequire(import.meta.url);
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
-const platformPackages: Record<string, string> = {
-  "darwin-arm64": "@spader/node-whisper-cpp-mac-arm64-metal",
-  "linux-x64": "@spader/node-whisper-cpp-linux-x64-cpu",
-};
-
-const localPlatformDirs: Record<string, string> = {
-  "@spader/node-whisper-cpp-mac-arm64-metal": "mac-arm64-metal",
-  "@spader/node-whisper-cpp-linux-x64-cpu": "linux-x64-cpu",
-};
-
-function getPlatformKey() {
-  return `${platform}-${arch}`;
-}
-
-function resolvePlatformPackageName(): string {
-  const platformKey = getPlatformKey();
-  const packageName = platformPackages[platformKey];
-  if (packageName) {
-    return packageName;
-  }
-
-  throw new Error(
-    `Unsupported platform ${platformKey}. Supported platforms: ${Object.keys(platformPackages).join(", ")}`
-  );
-}
-
-function resolvePlatformPackageDir(packageName: string): string {
+function resolvePlatformPackageDir(name: string): string {
   try {
-    const entryPath = require.resolve(packageName);
-    return join(dirname(entryPath), "..");
+    const entry = require.resolve(name);
+    return join(dirname(entry), "..");
   } catch {
-    const packageDirName = localPlatformDirs[packageName];
-    if (packageDirName == null) {
-      throw new Error(`No local package directory mapping for ${packageName}`);
-    }
-    return join(
-      currentDir,
-      "..",
-      "packages",
-      "platform",
-      packageDirName
-    );
+    const prefix = "@spader/node-whisper-cpp-";
+    return join(currentDir, "..", "packages", "platform", name.slice(prefix.length));
   }
 }
 
-let addonCache: NativeAddon | null = null;
+interface Store {
+  addon: NativeAddon | null
+}
+
+let store: Store = {
+  addon: null
+}
+
 
 export function loadAddon(): NativeAddon {
-  if (addonCache != null) {
-    return addonCache;
-  }
+  if (store.addon != null) return store.addon;
 
-  const packageName = resolvePlatformPackageName();
-  const packageDir = resolvePlatformPackageDir(packageName);
-  const binsDir = join(packageDir, "bins");
-  const addonPath = join(binsDir, "whisper-addon.node");
+  const triple = detect()
+  const name = `@spader/node-whisper-cpp-${triple}`
+  const dir = resolvePlatformPackageDir(name);
+  const addonPath = join(dir, "bins", "whisper-addon.node");
 
-  addonCache = require(addonPath) as NativeAddon;
-  return addonCache;
+  store.addon = require(addonPath) as NativeAddon;
+  return store.addon;
 }

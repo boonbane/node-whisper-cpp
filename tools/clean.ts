@@ -1,29 +1,31 @@
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
-async function main() {
-  const repoRoot = join(import.meta.dir, "..");
+const root = join(import.meta.dir, "..");
 
-  const paths = [
-    ".cache/build",
-    ".cache/store",
-    ".cache/source",
-    "dist",
-    "artifacts",
-    "packages/platform/linux-x64-cpu/bins",
-    "packages/platform/linux-x64-cpu/dist",
-    "packages/platform/mac-arm64-metal/bins",
-    "packages/platform/mac-arm64-metal/dist",
-  ];
+const paths = [
+  ".cache",
+  "build",
+  "dist",
+  "artifacts",
+  "test/.tmp",
+];
 
-  for (const relPath of paths) {
-    const absPath = join(repoRoot, relPath);
-    if (existsSync(absPath)) {
-      rmSync(absPath, { recursive: true, force: true });
-    }
+// packages/platform/*/dist and packages/platform/*/bins
+const platformDir = join(root, "packages", "platform");
+if (existsSync(platformDir)) {
+  for (const name of readdirSync(platformDir)) {
+    paths.push(`packages/platform/${name}/dist`);
+    paths.push(`packages/platform/${name}/bins`);
   }
-
-  console.log("repo-clean-ok");
 }
 
-main();
+for (const rel of paths) {
+  const abs = join(root, rel);
+  if (existsSync(abs)) {
+    rmSync(abs, { recursive: true, force: true });
+    console.log(`removed ${rel}`);
+  }
+}
+
+console.log("clean ok");

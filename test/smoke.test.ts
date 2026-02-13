@@ -1,28 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
-import { spinner } from "@clack/prompts";
+import { spinner, intro } from "@clack/prompts";
 import { describe, expect, it } from "bun:test";
 
 import { Build } from "#tools/build";
-
-type SmokeTarget = {
-  triple: "mac-arm64-metal" | "linux-x64-cpu";
-  platformPackage: "@spader/node-whisper-cpp-mac-arm64-metal" | "@spader/node-whisper-cpp-linux-x64-cpu";
-};
-
-const targetsBySystem: Record<string, SmokeTarget> = {
-  "darwin-arm64": {
-    triple: "mac-arm64-metal",
-    platformPackage: "@spader/node-whisper-cpp-mac-arm64-metal",
-  },
-  "linux-x64": {
-    triple: "linux-x64-cpu",
-    platformPackage: "@spader/node-whisper-cpp-linux-x64-cpu",
-  },
-};
+import { detect, resolveTarget, resolve } from "../packages/node-whisper-cpp/src/platform";
 
 const require = createRequire(import.meta.url);
 const tsc = require.resolve("typescript/bin/tsc");
@@ -32,13 +17,11 @@ const jsPackageDir = join(import.meta.dir, "packages", "js");
 const tsPackageDir = join(import.meta.dir, "packages", "ts");
 const jsTarballPath = join(repoRoot, ".cache", "store", "npm", "@spader", "node-whisper-cpp.tgz");
 
-function getTarget(): SmokeTarget | null {
-  const key = `${process.platform}-${process.arch}`;
-  return targetsBySystem[key] ?? null;
-}
+const triple = detect()
+const platformPackage = `@spader/node-whisper-cpp-${triple}`
 
-function nativeTarballPathFor(target: SmokeTarget): string {
-  return join(repoRoot, ".cache", "store", "npm", "@spader", `node-whisper-cpp-${target.triple}.tgz`);
+function nativeTarballPath(): string {
+  return join(repoRoot, ".cache", "store", "npm", "@spader", `node-whisper-cpp-${triple}.tgz`);
 }
 
 function run(command: string, args: string[], cwd: string) {
@@ -73,8 +56,22 @@ function resetPackageDir(packageDir: string) {
   rmSync(join(packageDir, "dist"), { recursive: true, force: true });
 }
 
-function assertInstalledPlatformPackage(packageDir: string, target: SmokeTarget) {
-  const packageJsonPath = join(packageDir, "node_modules", ...target.platformPackage.split("/"), "package.json");
+function patchFixturePackageJson(packageDir: string) {
+  const pkgPath = join(packageDir, "package.json");
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+  const ntPath = nativeTarballPath();
+  pkg.optionalDependencies = {
+    [platformPackage]: `file:${ntPath}`,
+  };
+  writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+}
+
+function restoreFixturePackageJson(packageDir: string) {
+  run("git", ["checkout", "package.json"], packageDir);
+}
+
+function assertInstalledPlatformPackage(packageDir: string) {
+  const packageJsonPath = join(packageDir, "node_modules", ...platformPackage.split("/"), "package.json");
   expect(existsSync(packageJsonPath)).toBe(true);
 }
 
@@ -82,6 +79,9 @@ describe("smoke", () => {
   it(
     "builds canonical tarballs and loads package in JS + TS consumers",
     async () => {
+      const target = resolveTarget()
+
+      intro(resolve())
       const progress = spinner();
       const runPhase = async <T>(label: string, fn: () => Promise<T> | T): Promise<T> => {
         progress.start(label);
@@ -95,43 +95,40 @@ describe("smoke", () => {
         }
       };
 
-      const target = getTarget();
-      if (target == null) {
-        console.warn(`Skipping smoke test for unsupported platform ${process.platform}-${process.arch}`);
-        return;
-      }
-
-      const nativeTarballPath = nativeTarballPathFor(target);
+      const ntPath = nativeTarballPath();
       await runPhase("Ensuring tarballs", async () => {
-        if (!existsSync(jsTarballPath) || !existsSync(nativeTarballPath)) {
-          await Build.system();
+        if (!existsSync(jsTarballPath) || !existsSync(ntPath)) {
+          await Build.all(target);
         }
 
         expect(existsSync(jsTarballPath)).toBe(true);
-        expect(existsSync(nativeTarballPath)).toBe(true);
+        expect(existsSync(ntPath)).toBe(true);
       });
 
       resetPackageDir(jsPackageDir);
+      patchFixturePackageJson(jsPackageDir);
       try {
         await runPhase("Installing JS fixture", () => {
           run("npm", ["install"], jsPackageDir);
         });
         await runPhase("Running JS smoke", () => {
-          assertInstalledPlatformPackage(jsPackageDir, target);
+          assertInstalledPlatformPackage(jsPackageDir);
           const jsRun = run("node", ["./check.mjs"], jsPackageDir);
           expect(jsRun.stdout).toContain("smoke-js-ok");
         });
       } finally {
         resetPackageDir(jsPackageDir);
+        restoreFixturePackageJson(jsPackageDir);
       }
 
       resetPackageDir(tsPackageDir);
+      patchFixturePackageJson(tsPackageDir);
       try {
         await runPhase("Installing TS fixture", () => {
           run("npm", ["install"], tsPackageDir);
         });
         await runPhase("Compiling TS fixture", () => {
-          assertInstalledPlatformPackage(tsPackageDir, target);
+          assertInstalledPlatformPackage(tsPackageDir);
           run("node", [tsc, "--project", "tsconfig.json"], tsPackageDir);
         });
         await runPhase("Running TS smoke", () => {
@@ -140,6 +137,7 @@ describe("smoke", () => {
         });
       } finally {
         resetPackageDir(tsPackageDir);
+        restoreFixturePackageJson(tsPackageDir);
       }
     },
     1200000
