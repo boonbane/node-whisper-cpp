@@ -8,7 +8,7 @@ import yargs from "yargs";
 import type { Argv } from "yargs";
 import { hideBin } from "yargs/helpers";
 
-import { resolveTarget, getPackageName } from "../packages/node-whisper-cpp/src/platform";
+import { resolveTarget, getPlatformId, getPackageName } from "../packages/node-whisper-cpp/src/platform";
 import type { Target, Backend, Os } from "../packages/node-whisper-cpp/src/platform";
 
 const REPO = join(import.meta.dir, "..");
@@ -28,26 +28,22 @@ const dirs = {
   JS_INSTALL: join(REPO, ".cache", "store", "js"),
   WHISPER_SOURCE: join(REPO, ".cache", "source", "whisper.cpp"),
   WHISPER_BUILD_ROOT: join(REPO, ".cache", "build"),
-  WHISPER_BUILD: (target: Target) => join(REPO, ".cache", "build", getPackageName(target), "whisper"),
-  WHISPER_INSTALL: (target: Target) => join(REPO, ".cache", "store", "whisper.cpp", getPackageName(target)),
+  WHISPER_BUILD: (target: Target) => join(REPO, ".cache", "build", getPlatformId(target), "whisper"),
+  WHISPER_INSTALL: (target: Target) => join(REPO, ".cache", "store", "whisper.cpp", getPlatformId(target)),
   ADDON_BUILD: join(REPO, ".cache", "build", "node"),
-  ADDON_PACKAGE_JSON: (target: Target) => join(REPO, "packages", "platform", getPackageName(target), "package.json"),
-  ADDON_TSCONFIG: (target: Target) => join(REPO, "packages", "platform", getPackageName(target), "tsconfig.json"),
+  ADDON_PACKAGE_JSON: (target: Target) => join(REPO, "packages", "platform", getPlatformId(target), "package.json"),
+  ADDON_TSCONFIG: (target: Target) => join(REPO, "packages", "platform", getPlatformId(target), "tsconfig.json"),
   source: join(REPO, ".cache", "source"),
   store: {
-    addon: (target: Target) => join(REPO, ".cache", "store", "addon", getPackageName(target)),
+    addon: (target: Target) => join(REPO, ".cache", "store", "addon", getPlatformId(target)),
+  },
+  tarballs: {
+    addon: (target: Target) => join(REPO, ".cache", "store", "npm", "@spader", `${getPackageName(target)}.tgz`),
+    js: join(REPO, ".cache", "store", "npm", "node-whisper-cpp.tgz"),
   }
 };
 
-function getJsTarballPath() {
-  return join(dirs.TARBALLS, "@spader", "node-whisper-cpp.tgz");
-}
-
-function getNativeTarballPath(target: Target) {
-  return join(dirs.TARBALLS, "@spader", `node-whisper-cpp-${getPackageName(target)}.tgz`);
-}
-
-async function packToCanonicalTarball(sourceDir: string, outputPath: string) {
+async function packTarball(sourceDir: string, outputPath: string) {
   const outputDir = dirname(outputPath);
   const stagingDir = join(outputDir, ".staging");
 
@@ -117,7 +113,7 @@ namespace Native {
 }
 
 namespace Addon {
-  const getCmakeTripleDefine = (target: Target) => `--CDWHISPER_TRIPLE=${getPackageName(target)}`;
+  const getCmakeTripleDefine = (target: Target) => `--CDWHISPER_TRIPLE=${getPlatformId(target)}`;
 
   function materializeDylibAliases(target: Target) {
     const binsDir = join(dirs.store.addon(target), "bins");
@@ -162,6 +158,10 @@ namespace Addon {
     await $`node ${tsc} --project ${dirs.ADDON_TSCONFIG(target)} --outDir ${join(dirs.store.addon(target), "dist")}`.cwd(REPO);
   }
 
+  export async function pack(target: Target) {
+    await packTarball(dirs.store.addon(target), dirs.tarballs.addon(target));
+  }
+
   export async function clean(options: RunOptions = {}) {
     if (options.dryRun) {
       return;
@@ -198,33 +198,18 @@ namespace Js {
     writeFileSync(targetPath, `${JSON.stringify(stagedPkg, null, 2)}\n`);
 
     await $`node ${tsc} --project tsconfig.json --outDir ${join(dirs.JS_INSTALL, "dist")}`.cwd(REPO);
+  }
 
+  export async function pack() {
+    await packTarball(dirs.JS_INSTALL, dirs.tarballs.js);
   }
 }
-
-namespace Package {
-  export async function build(target: Target, options: RunOptions = {}) {
-    if (options.dryRun) {
-      return;
-    }
-
-    await packToCanonicalTarball(dirs.JS_INSTALL, getJsTarballPath());
-    await packToCanonicalTarball(dirs.store.addon(target), getNativeTarballPath(target));
-  }
-}
-
 
 export const Build = {
   async js(options: RunOptions = {}) {
     await Js.build(options);
+    await Js.pack();
   },
-
-  async all(target: Target, options: RunOptions = {}) {
-    await Native.build(target, options);
-    await Addon.build(target, options);
-    await Js.build(options);
-    await Package.build(target, options);
-  }
 };
 
 const backendOption = (command: Argv) => {
@@ -235,15 +220,6 @@ const backendOption = (command: Argv) => {
 async function main() {
   await yargs(hideBin(process.argv))
     .scriptName("release")
-    .command(
-      "system",
-      "Run native + addon + js + pack for current system",
-      backendOption,
-      async (argv) => {
-        const target = resolveTarget(argv.backend as Backend | undefined);
-        await Build.all(target);
-      }
-    )
     .command(
       "native",
       "Build whisper native libraries",
@@ -261,6 +237,7 @@ async function main() {
         const target = resolveTarget(argv.backend as Backend | undefined);
         await Native.build(target);
         await Addon.build(target);
+        await Addon.pack(target);
       }
     )
     .command(
@@ -269,15 +246,7 @@ async function main() {
       (cmd) => cmd,
       async () => {
         await Js.build();
-      }
-    )
-    .command(
-      "pack",
-      "Build package tarball",
-      backendOption,
-      async (argv) => {
-        const target = resolveTarget(argv.backend as Backend | undefined);
-        await Package.build(target);
+        await Js.pack();
       }
     )
     .command(
@@ -286,7 +255,11 @@ async function main() {
       backendOption,
       async (argv) => {
         const target = resolveTarget(argv.backend as Backend | undefined);
-        await Build.all(target);
+        await Native.build(target);
+        await Addon.build(target);
+        await Js.build();
+        await Addon.pack(target);
+        await Js.pack();
       }
     )
     .command(
