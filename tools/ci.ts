@@ -1,10 +1,9 @@
-import { join } from "node:path";
-
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
 import { bump } from "./version";
 import { install } from "./install";
+import { publish } from "./publish";
 
 async function main() {
   await yargs(hideBin(process.argv))
@@ -31,6 +30,12 @@ async function main() {
           await Bun.file(process.env.GITHUB_OUTPUT).writer().write(`version=${version}\n`);
         }
       }
+    )
+    .command(
+      "publish",
+      "Publish tarballs from artifacts/ (platform packages first, then JS)",
+      (command) => command,
+      async () => await publish(),
     )
     .demandCommand(1)
     .strict()

@@ -1,6 +1,6 @@
 import { copyFileSync, mkdirSync, existsSync as exists, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
 import { $ } from "bun";
 
@@ -8,7 +8,7 @@ import yargs from "yargs";
 import type { Argv } from "yargs";
 import { hideBin } from "yargs/helpers";
 
-import { resolveTarget, getPlatformId, getPackageName } from "../packages/node-whisper-cpp/src/platform";
+import { resolveTarget, getPlatformId } from "../packages/node-whisper-cpp/src/platform";
 import type { Target, Backend, Os } from "../packages/node-whisper-cpp/src/platform";
 
 const REPO = join(import.meta.dir, "..");
@@ -24,7 +24,6 @@ const dirs = {
   REPO,
   CACHE: join(REPO, ".cache"),
   STORE: join(REPO, ".cache", "store"),
-  TARBALLS: join(REPO, ".cache", "store", "npm"),
   JS_INSTALL: join(REPO, ".cache", "store", "js"),
   WHISPER_SOURCE: join(REPO, ".cache", "source", "whisper.cpp"),
   WHISPER_BUILD_ROOT: join(REPO, ".cache", "build"),
@@ -37,30 +36,12 @@ const dirs = {
   store: {
     addon: (target: Target) => join(REPO, ".cache", "store", "addon", getPlatformId(target)),
   },
-  tarballs: {
-    addon: (target: Target) => join(REPO, ".cache", "store", "npm", "@spader", `${getPackageName(target)}.tgz`),
-    js: join(REPO, ".cache", "store", "npm", "@spader", "node-whisper-cpp.tgz"),
-  },
+  tarballs: join(REPO, ".cache", "store", "npm"),
 };
 
-async function packTarball(sourceDir: string, outputPath: string) {
-  const outputDir = dirname(outputPath);
-  const stagingDir = join(outputDir, ".staging");
-
-  rmSync(stagingDir, { recursive: true, force: true });
-  mkdirSync(stagingDir, { recursive: true });
-
-  await $`npm pack --pack-destination ${stagingDir}`.cwd(sourceDir);
-
-  const tarballs = readdirSync(stagingDir).filter((fileName) => fileName.endsWith(".tgz"));
-  if (tarballs.length !== 1) {
-    throw new Error(`Expected exactly one tarball from npm pack in ${stagingDir}, found ${tarballs.length}`);
-  }
-
+async function packTarball(sourceDir: string, outputDir: string) {
   mkdirSync(outputDir, { recursive: true });
-  rmSync(outputPath, { force: true });
-  copyFileSync(join(stagingDir, tarballs[0]), outputPath);
-  rmSync(stagingDir, { recursive: true, force: true });
+  await $`npm pack --pack-destination ${outputDir}`.cwd(sourceDir);
 }
 
 namespace Native {
@@ -159,7 +140,7 @@ namespace Addon {
   }
 
   export async function pack(target: Target) {
-    await packTarball(dirs.store.addon(target), dirs.tarballs.addon(target));
+    await packTarball(dirs.store.addon(target), dirs.tarballs);
   }
 
   export async function clean(options: RunOptions = {}) {
@@ -201,7 +182,7 @@ namespace Js {
   }
 
   export async function pack() {
-    await packTarball(dirs.JS_INSTALL, dirs.tarballs.js);
+    await packTarball(dirs.JS_INSTALL, dirs.tarballs);
   }
 }
 

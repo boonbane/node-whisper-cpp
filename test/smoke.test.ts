@@ -8,6 +8,7 @@ import { describe, expect, it } from "bun:test";
 
 import { Build } from "#tools/build";
 import { detect, resolveTarget, resolve } from "../packages/node-whisper-cpp/src/platform";
+import { current } from "../tools/version";
 
 const require = createRequire(import.meta.url);
 const tsc = require.resolve("typescript/bin/tsc");
@@ -15,14 +16,14 @@ const tsc = require.resolve("typescript/bin/tsc");
 const repoRoot = join(import.meta.dir, "..");
 const jsPackageDir = join(import.meta.dir, "packages", "js");
 const tsPackageDir = join(import.meta.dir, "packages", "ts");
-const jsTarballPath = join(repoRoot, ".cache", "store", "npm", "@spader", "node-whisper-cpp.tgz");
+const npmDir = join(repoRoot, ".cache", "store", "npm");
 
-const triple = detect()
-const platformPackage = `@spader/node-whisper-cpp-${triple}`
+const version = current();
+const triple = detect();
+const platformPackage = `@spader/node-whisper-cpp-${triple}`;
 
-function nativeTarballPath(): string {
-  return join(repoRoot, ".cache", "store", "npm", "@spader", `node-whisper-cpp-${triple}.tgz`);
-}
+const jsTarball = join(npmDir, `spader-node-whisper-cpp-${version}.tgz`);
+const addonTarball = join(npmDir, `spader-node-whisper-cpp-${triple}-${version}.tgz`);
 
 function run(command: string, args: string[], cwd: string) {
   const result = spawnSync(command, args, {
@@ -56,12 +57,14 @@ function resetPackageDir(packageDir: string) {
   rmSync(join(packageDir, "dist"), { recursive: true, force: true });
 }
 
-function patchFixturePackageJson(packageDir: string) {
+function patchFixturePackageJson(packageDir: string, jsTarball: string, addonTarball: string) {
   const pkgPath = join(packageDir, "package.json");
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
-  const ntPath = nativeTarballPath();
+  pkg.dependencies = {
+    "@spader/node-whisper-cpp": `file:${jsTarball}`,
+  };
   pkg.optionalDependencies = {
-    [platformPackage]: `file:${ntPath}`,
+    [platformPackage]: `file:${addonTarball}`,
   };
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
 }
@@ -95,20 +98,17 @@ describe("smoke", () => {
         }
       };
 
-      const ntPath = nativeTarballPath();
-      await runPhase("Ensuring tarballs", async () => {
-        const fail = (path: string) => {
+      await runPhase("Ensuring tarballs", () => {
+        for (const path of [jsTarball, addonTarball]) {
           if (!existsSync(path)) {
-            outro(`Failed to find ${path}. Build first.`)
-            process.exit(1)
+            outro(`Missing ${path}. Build first.`);
+            process.exit(1);
           }
         }
-        fail(jsTarballPath)
-        fail(ntPath)
       });
 
       resetPackageDir(jsPackageDir);
-      patchFixturePackageJson(jsPackageDir);
+      patchFixturePackageJson(jsPackageDir, jsTarball, addonTarball);
       try {
         await runPhase("Installing JS fixture", () => {
           run("npm", ["install"], jsPackageDir);
@@ -124,7 +124,7 @@ describe("smoke", () => {
       }
 
       resetPackageDir(tsPackageDir);
-      patchFixturePackageJson(tsPackageDir);
+      patchFixturePackageJson(tsPackageDir, jsTarball, addonTarball);
       try {
         await runPhase("Installing TS fixture", () => {
           run("npm", ["install"], tsPackageDir);

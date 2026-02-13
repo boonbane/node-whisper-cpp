@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { Glob } from "bun"
 
@@ -10,13 +11,13 @@ const Bump = {
 } as const
 type Bump = (typeof Bump)[keyof typeof Bump]
 
-async function current() {
-  const pkg = await Bun.file(join(dir, "package.json")).json()
-  return pkg.version as string
+function current(): string {
+  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))
+  return pkg.version
 }
 
 async function bump(input: Bump | string) {
-  const version = input in Bump ? apply(await current(), input as Bump) : input
+  const version = input in Bump ? apply(current(), input as Bump) : input
 
   const files = await Array.fromAsync(
     new Glob("**/package.json").scan({ cwd: dir, absolute: true })
