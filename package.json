@@ -32,6 +32,10 @@
     "@spader/node-whisper-cpp-mac-arm64-metal": "0.0.1",
     "@spader/node-whisper-cpp-linux-x64-cpu": "0.0.1"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tspader/node-whisper-cpp"
+  },
   "publishConfig": {
     "access": "public"
   },

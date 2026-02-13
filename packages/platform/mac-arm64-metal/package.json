@@ -23,6 +23,10 @@
   "cpu": [
     "arm64"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tspader/node-whisper-cpp"
+  },
   "license": "MIT",
   "publishConfig": {
     "access": "public"
