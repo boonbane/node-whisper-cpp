@@ -1,0 +1,46 @@
+name: build-single
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target to build"
+        required: true
+        type: choice
+        default: x64-linux-cpu-gnu
+        options:
+          - x64-linux-cpu-gnu
+          - x64-linux-cuda-gnu
+          - arm64-darwin-metal
+
+permissions:
+  contents: read
+
+jobs:
+  build-cpu:
+    if: ${{ inputs.target == 'x64-linux-cpu-gnu' }}
+    uses: ./.github/workflows/build-target.yml
+    with:
+      triple: x64-linux-cpu-gnu
+      os: ubuntu-22.04
+      backend: cpu
+      smoke: true
+
+  build-cuda:
+    if: ${{ inputs.target == 'x64-linux-cuda-gnu' }}
+    uses: ./.github/workflows/build-target.yml
+    with:
+      triple: x64-linux-cuda-gnu
+      os: ubuntu-22.04
+      backend: cuda
+      cuda: "12.6.3"
+      smoke: false
+
+  build-metal:
+    if: ${{ inputs.target == 'arm64-darwin-metal' }}
+    uses: ./.github/workflows/build-target.yml
+    with:
+      triple: arm64-darwin-metal
+      os: macos-26
+      backend: metal
+      smoke: false
