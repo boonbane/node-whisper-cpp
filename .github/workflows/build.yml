@@ -26,6 +26,9 @@ permissions:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    env:
+      SCCACHE_DIR: ${{ github.workspace }}/.cache/sccache
+      SCCACHE_CACHE_SIZE: 4G
     strategy:
       fail-fast: false
       matrix:
@@ -63,6 +66,26 @@ jobs:
           brew install cmake ninja
           bun install
 
+      - name: Resolve CUDA paths
+        if: matrix.cuda
+        id: cuda-paths
+        run: bun run ./tools/cuda.ts paths ${{ matrix.cuda }}
+
+      - name: Cache CUDA toolkit
+        if: matrix.cuda
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.cuda-paths.outputs.path }}
+          key: cuda-toolkit-${{ matrix.cuda }}-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Cache sccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ matrix.triple }}-${{ github.run_id }}
+          restore-keys: |
+            sccache-${{ matrix.triple }}-
+
       - name: Setup CUDA
         if: matrix.cuda
         run: bun run ./tools/cuda.ts install ${{ matrix.cuda }}
@@ -82,6 +105,14 @@ jobs:
 
       - name: Stage artifacts
         run: bun run ./tools/stage.ts addon
+
+      - name: Normalize CUDA cache permissions
+        if: matrix.cuda && always()
+        run: bun run ./tools/cuda.ts normalize-cache-permissions ${{ matrix.cuda }}
+
+      - name: Show sccache stats
+        if: always()
+        run: sccache --show-stats || true
 
       - name: Upload artifacts
         if: ${{ !env.ACT }}
