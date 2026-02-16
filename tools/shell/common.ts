@@ -14,5 +14,5 @@ export const quote = (value: string): string => `'${value.replace(/'/g, `'"'"'`)
 
 export async function run(command: string) {
   console.log(`$ ${command}`);
-  await $`bash -lc ${command}`.cwd(dir);
+  await $`${command}`.cwd(dir);
 }
