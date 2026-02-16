@@ -157,6 +157,8 @@ namespace Native {
       return;
     }
 
+    const hasSccache = !!Bun.which("sccache");
+
     if (!exists(dirs.whisper)) {
       await $`mkdir -p ${dirs.source}`.cwd(REPO);
       await $`git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git`.cwd(dirs.source);
@@ -177,9 +179,9 @@ namespace Native {
       .defineIf("GGML_CPU_ALL_VARIANTS", "ON",            () => !!options.ci && target.arch === "x64")
       .defineIf("GGML_BACKEND_DL", "ON",                  () => !!options.ci)
       .defineIf("GGML_OPENMP", "OFF",                     () => !!options.ci)
-      .defineIf("CMAKE_C_COMPILER_LAUNCHER", "sccache",   () => !!options.ci)
-      .defineIf("CMAKE_CXX_COMPILER_LAUNCHER", "sccache", () => !!options.ci)
-      .defineIf("CMAKE_CUDA_COMPILER_LAUNCHER", "sccache", () => !!options.ci && target.backend === "cuda")
+      .defineIf("CMAKE_C_COMPILER_LAUNCHER", "sccache",   () => !!options.ci && hasSccache)
+      .defineIf("CMAKE_CXX_COMPILER_LAUNCHER", "sccache", () => !!options.ci && hasSccache)
+      .defineIf("CMAKE_CUDA_COMPILER_LAUNCHER", "sccache", () => !!options.ci && hasSccache && target.backend === "cuda")
       .defines(cmakeFlags(target.os))
       .configure()
       .build()

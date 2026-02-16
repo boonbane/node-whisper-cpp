@@ -6,6 +6,10 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
+      pr:
+        description: "PR number to run manually (optional)"
+        required: false
+        type: string
       bump:
         description: "Bump major, minor, or patch"
         required: false
@@ -31,13 +35,14 @@ jobs:
       matrix:
         include:
           - triple: x64-linux-cpu-gnu
-            os: ubuntu-22.04
+            os: blacksmith-16vcpu-ubuntu-2204
             backend: cpu
             smoke: true
-          - triple: blacksmith-16vcpu-ubuntu-2204
-            os: ubuntu-22.04
+          - triple: x64-linux-cuda-gnu
+            os: blacksmith-16vcpu-ubuntu-2204
             backend: cuda
             cuda: "12.6.3"
+            cudaMinor: "12.6"
             smoke: false
           - triple: arm64-darwin-metal
             os: macos-26
@@ -47,6 +52,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.pr && format('refs/pull/{0}/head', inputs.pr) || github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -63,14 +70,45 @@ jobs:
           brew install cmake ninja
           bun install
 
-      - name: Setup CUDA
+      - name: Mount CUDA toolkit
         if: matrix.cuda
-        run: bun run ./tools/cuda.ts install ${{ matrix.cuda }}
+        uses: useblacksmith/stickydisk@v1
+        with:
+          key: cuda-toolkit-${{ matrix.cuda }}-${{ runner.os }}-${{ runner.arch }}
+          path: /usr/local/cuda-${{ matrix.cudaMinor }}
 
-      - name: Setup sccache
+      - name: Prepare CUDA toolkit
+        if: matrix.cuda
+        run: bun run ./tools/cuda.ts prepare ${{ matrix.cuda }}
+
+      - name: Mount sccache storage
+        if: runner.os == 'Linux'
+        uses: useblacksmith/stickydisk@v1
+        with:
+          key: sccache-${{ matrix.triple }}-${{ runner.os }}-${{ runner.arch }}
+          path: /home/runner/.cache/sccache
+
+      - name: Setup sccache (Linux)
+        if: runner.os == 'Linux'
+        uses: mozilla-actions/sccache-action@v0.0.9
+        env:
+          SCCACHE_DIR: /home/runner/.cache/sccache
+          SCCACHE_CACHE_SIZE: 20G
+          SCCACHE_GHA_ENABLED: "false"
+
+      - name: Setup sccache (macOS)
+        if: runner.os == 'macOS'
         uses: mozilla-actions/sccache-action@v0.0.9
 
-      - name: Build native addon
+      - name: Build native addon (Linux)
+        if: runner.os == 'Linux'
+        env:
+          SCCACHE_DIR: /home/runner/.cache/sccache
+          SCCACHE_GHA_ENABLED: "false"
+        run: bun run ./tools/build.ts addon --backend ${{ matrix.backend }} --ci
+
+      - name: Build native addon (macOS)
+        if: runner.os == 'macOS'
         run: bun run ./tools/build.ts addon --backend ${{ matrix.backend }} --ci
 
       - name: Build JS package for smoke test
@@ -97,6 +135,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.pr && format('refs/pull/{0}/head', inputs.pr) || github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -122,12 +162,15 @@ jobs:
 
   publish:
     needs: package
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.pr == '' }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     environment: production
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.pr && format('refs/pull/{0}/head', inputs.pr) || github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
