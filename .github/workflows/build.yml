@@ -18,6 +18,16 @@ on:
         description: "Override version (optional)"
         required: false
         type: string
+      target:
+        description: "Matrix target to build"
+        required: false
+        type: choice
+        default: all
+        options:
+          - all
+          - x64-linux-cpu-gnu
+          - x64-linux-cuda-gnu
+          - arm64-darwin-metal
 
 permissions:
   contents: read
@@ -25,6 +35,7 @@ permissions:
 
 jobs:
   build:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == matrix.triple }}
     runs-on: ${{ matrix.os }}
     env:
       SCCACHE_DIR: ${{ github.workspace }}/.cache/sccache
@@ -123,6 +134,7 @@ jobs:
           path: artifacts
 
   package:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.target == 'all' }}
     needs: build
     runs-on: ubuntu-22.04
     steps:
@@ -152,6 +164,7 @@ jobs:
           path: artifacts
 
   publish:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.target == 'all' }}
     needs: package
     runs-on: ubuntu-latest
     environment: production
